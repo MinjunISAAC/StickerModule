@@ -75,9 +75,13 @@ namespace Gunter.Sticker.EditorTools
             mr.sharedMaterial = mat;
             mr.sortingLayerID = sr.sortingLayerID; // 정렬 유지
             mr.sortingOrder = sr.sortingOrder;
+            mr.enabled = false; // 스크롤/드래그 중엔 스프라이트, 배치 순간에 켬
 
-            // 원본 스프라이트 렌더러는 비활성화(참고용으로 남겨둠).
-            sr.enabled = false;
+            // wrap 연출 컴포넌트 부착(배치 시점에 UI_DraggableSticker 가 재생).
+            if (go.GetComponent<UI_StickerMeshWrap>() == null)
+                go.AddComponent<UI_StickerMeshWrap>();
+
+            // 스프라이트 렌더러는 그대로 유지(스크롤/드래그용).
 
             EditorUtility.SetDirty(go);
         }
