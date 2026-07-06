@@ -76,8 +76,8 @@ namespace Gunter.Sticker.EditorTools
             var mesh = BuildGridMesh(sprite, SUBDIVISIONS);
             mesh.name = sprite.name + "_grid";
 
-            string meshPath = AssetDatabase.GenerateUniqueAssetPath($"{MESH_DIR}/{mesh.name}.asset");
-            AssetDatabase.CreateAsset(mesh, meshPath);
+            // 스프라이트별 고정 경로 → 재베이크 시 기존 에셋을 덮어써서 파일이 쌓이지 않게.
+            mesh = SaveOrUpdateMesh(mesh, $"{MESH_DIR}/{sprite.name}_grid.asset");
 
             var mat = GetOrCreateMaterial(sprite.texture);
 
@@ -229,8 +229,8 @@ namespace Gunter.Sticker.EditorTools
                 bindposes[i] = bones[i].worldToLocalMatrix * child.localToWorldMatrix;
             mesh.bindposes = bindposes;
 
-            string meshPath = AssetDatabase.GenerateUniqueAssetPath($"{MESH_DIR}/{mesh.name}.asset");
-            AssetDatabase.CreateAsset(mesh, meshPath);
+            // 오브젝트별 고정 경로 → 재베이크 시 덮어쓰기.
+            mesh = SaveOrUpdateMesh(mesh, $"{MESH_DIR}/{go.name}_{sprite.name}_skinned.asset");
 
             // SkinnedMeshRenderer 세팅.
             var smr = childObj.GetComponent<SkinnedMeshRenderer>();
@@ -285,6 +285,19 @@ namespace Gunter.Sticker.EditorTools
         {
             var c = go.GetComponent<T>();
             if (c != null) Object.DestroyImmediate(c);
+        }
+
+        // 같은 경로에 에셋이 있으면 내용만 덮어써(참조 유지), 없으면 새로 생성.
+        private static Mesh SaveOrUpdateMesh(Mesh mesh, string path)
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
+            if (existing != null)
+            {
+                EditorUtility.CopySerialized(mesh, existing); // 기존 에셋 참조 유지한 채 데이터 교체
+                return existing;
+            }
+            AssetDatabase.CreateAsset(mesh, path);
+            return mesh;
         }
 
         // --------------------------------------------------
