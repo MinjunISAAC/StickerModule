@@ -175,8 +175,14 @@ namespace Gunter.Sticker
                 pointerPrevWorldX = wp.x;
                 velocity = 0f;
 
-                var hit = Physics2D.OverlapPoint(wp, itemLayerMask);
-                candidate = hit != null ? hit.GetComponentInParent<UI_DraggableSticker>() : null;
+                // 뷰포트 트리거 콜라이더와 겹쳐도 아이템을 정확히 찾도록 전부 검사.
+                candidate = null;
+                var hits = Physics2D.OverlapPointAll(wp, itemLayerMask);
+                for (int i = 0; i < hits.Length; i++)
+                {
+                    var d = hits[i].GetComponentInParent<UI_DraggableSticker>();
+                    if (d != null) { candidate = d; break; }
+                }
                 dragMode = EDragMode.Undecided;
             }
             else if (Input.GetMouseButton(0) && dragMode != EDragMode.None)
