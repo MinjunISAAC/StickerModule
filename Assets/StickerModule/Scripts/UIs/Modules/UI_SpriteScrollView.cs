@@ -37,6 +37,8 @@ namespace Gunter.Sticker
         [Header("Layout")]
         [SerializeField] private bool autoLayout = true;      // 시작 시 자식들을 spacing 간격으로 정렬
         [SerializeField] private float spacing = 1.2f;        // 아이템 간 간격(월드 단위, stride)
+        [SerializeField] private float paddingStart = 0f;     // 앞(왼쪽) 여백
+        [SerializeField] private float paddingEnd = 0f;       // 뒤(오른쪽) 여백
         [SerializeField] private bool applyMaskInteraction = true;
 
         [Header("Scroll")]
@@ -61,7 +63,8 @@ namespace Gunter.Sticker
         private float pointerPrevWorldX = 0f;
         private float velocity = 0f;      // 월드 단위/초
         private float minX = 0f;          // content.localPosition.x 허용 최소
-        private float maxX = 0f;          // content.localPosition.x 허용 최대
+        private float maxX = 0f;          // content.localPosition.x 허용 최대(=홈, 왼쪽 정렬)
+        private float homeX = 0f;         // 시작 시점 Content 위치(왼쪽 정렬 기준)
         private float contentWidth = 0f;
 
         // --------------------------------------------------
@@ -88,6 +91,8 @@ namespace Gunter.Sticker
         private void Start()
         {
             viewportCollider.size = new Vector2(viewportWidth, viewportHeight);
+            // 시작 위치를 홈(왼쪽 정렬 기준)으로 기억. 이후 여기가 오른쪽 경계가 된다.
+            if (content != null) homeX = content.localPosition.x;
             if (autoLayout) Rebuild();
             else RecalculateBounds();
         }
@@ -106,7 +111,7 @@ namespace Gunter.Sticker
         {
             if (content == null) return;
 
-            float x = 0f;
+            float x = paddingStart;
             for (int i = 0; i < content.childCount; i++)
             {
                 var child = content.GetChild(i);
@@ -153,12 +158,12 @@ namespace Gunter.Sticker
                     if (content.GetChild(i).gameObject.activeSelf) count++;
             }
 
-            contentWidth = count * spacing;
+            contentWidth = paddingStart + count * spacing + paddingEnd;
 
-            // 왼쪽 끝(0)에서 시작해, 화면을 넘치는 만큼만 왼쪽으로 스크롤 가능.
+            // 홈(왼쪽 정렬)에서 시작해, 화면을 넘치는 만큼만 왼쪽으로 스크롤 가능.
             float scrollable = Mathf.Max(0f, contentWidth - viewportWidth);
-            maxX = 0f;
-            minX = -scrollable;
+            maxX = homeX;
+            minX = homeX - scrollable;
         }
 
         // --------------------------------------------------
