@@ -135,44 +135,42 @@ namespace Gunter.Sticker.EditorTools
                 return;
             }
 
-            EnsureFolder(MESH_DIR);
-            EnsureFolder(MAT_DIR);
-
             int baked = 0;
             foreach (var go in objs)
-            {
-                var sr = go.GetComponent<SpriteRenderer>();
-                if (sr == null || sr.sprite == null) continue;
-
-                var line = go.GetComponentInChildren<UI_StickerBoneLine>(true);
-                if (line == null || line.Points.Count < 2)
-                {
-                    Debug.LogWarning($"[StickerMeshBaker] '{go.name}' 에 선(2점 이상)이 있는 UI_StickerBoneLine 이 필요합니다.");
-                    continue;
-                }
-
-                BakeSkinnedOne(go, sr, line);
-                baked++;
-            }
+                if (BakeSkinned(go)) baked++;
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log($"[StickerMeshBaker] {baked}개를 스킨 메시로 구웠습니다.");
         }
 
-        // 외부(샘플 빌더 등)에서 단일 오브젝트를 본 스킨 메시로 굽는 진입점.
-        public static void BakeSkinned(GameObject go)
+        // 외부(샘플 빌더/인스펙터 버튼)에서 단일 오브젝트를 본 스킨 메시로 굽는 진입점.
+        // UI_StickerBoneLine 이 자식(WrapMesh)에 있어도, SpriteRenderer 를 부모까지 찾아 스티커 루트로 굽는다.
+        public static bool BakeSkinned(GameObject go)
         {
-            if (go == null) return;
-            var sr = go.GetComponent<SpriteRenderer>();
-            if (sr == null || sr.sprite == null) return;
+            if (go == null) return false;
 
-            var line = go.GetComponentInChildren<UI_StickerBoneLine>(true);
-            if (line == null || line.Points.Count < 2) return;
+            // SpriteRenderer 를 self → 부모 순으로 찾아 스티커 루트 결정.
+            var sr = go.GetComponent<SpriteRenderer>();
+            if (sr == null) sr = go.GetComponentInParent<SpriteRenderer>();
+            if (sr == null || sr.sprite == null)
+            {
+                Debug.LogWarning($"[StickerMeshBaker] '{go.name}': SpriteRenderer(스프라이트)를 찾지 못했습니다. 스티커 오브젝트나 그 자식에 UI_StickerBoneLine 을 두세요.");
+                return false;
+            }
+
+            var root = sr.gameObject;
+            var line = root.GetComponentInChildren<UI_StickerBoneLine>(true);
+            if (line == null || line.Points.Count < 2)
+            {
+                Debug.LogWarning($"[StickerMeshBaker] '{root.name}': 선(2점 이상)이 있는 UI_StickerBoneLine 이 필요합니다.");
+                return false;
+            }
 
             EnsureFolder(MESH_DIR);
             EnsureFolder(MAT_DIR);
-            BakeSkinnedOne(go, sr, line);
+            BakeSkinnedOne(root, sr, line);
+            return true;
         }
 
         private static void BakeSkinnedOne(GameObject go, SpriteRenderer sr, UI_StickerBoneLine line)
