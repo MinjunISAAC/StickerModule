@@ -124,16 +124,15 @@ namespace Gunter.Sticker
             }
         }
 
-        // 빈 곳에 놓았을 때: 원래 자리로 가속하며(ease-in) 미끄러져 복귀.
+        // 빈 곳에 놓았을 때: 원래 슬롯으로 가속하며(ease-in) 미끄러져 복귀.
+        // 비행하는 동안 스크롤뷰의 빈자리도 위치에 맞춰 서서히 다시 벌어진다(UpdateGap).
         private IEnumerator CoReturn()
         {
             isPlacing = true; // 복귀 중 재-뽑기 방지
 
             Vector3 from = transform.position;
-
-            // 원래 순서로 되돌려 최종(정착) 위치를 구한다.
-            owner.ReturnItem(transform, originalSiblingIndex);
-            Vector3 to = transform.position;
+            // 아직 재삽입하지 않고, 슬롯이 놓일 목표 위치만 구한다(빈자리 유지).
+            Vector3 to = owner.GetSlotWorldPosition(originalSiblingIndex);
 
             // 비행 중엔 잘리지 않게(마스크 밖) + 맨 위로.
             if (sr != null)
@@ -148,16 +147,17 @@ namespace Gunter.Sticker
                 t += Time.deltaTime / Mathf.Max(0.0001f, returnDuration);
                 float e = Mathf.Clamp01(t); e *= e; // 가속(ease-in)
                 transform.position = Vector3.LerpUnclamped(from, to, e);
-                yield return null;
+                yield return null; // 비행 동안 UpdateGap 이 빈자리를 서서히 다시 벌림
             }
             transform.position = to;
 
-            // 도착 → 스크롤 상태로 복원(다시 클리핑).
+            // 도착 → 스크롤 상태로 복원 + 목록에 재삽입(빈자리 이미 벌어져 매끄러움).
             if (sr != null)
             {
                 sr.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
                 sr.sortingOrder = baseOrder;
             }
+            owner.ReturnItem(transform, originalSiblingIndex);
             isPlacing = false;
         }
 

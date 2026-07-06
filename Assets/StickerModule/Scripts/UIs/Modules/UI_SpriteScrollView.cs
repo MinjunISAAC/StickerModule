@@ -206,6 +206,14 @@ namespace Gunter.Sticker
             Rebuild();
         }
 
+        // 특정 레이아웃 인덱스의 아이템이 놓일 월드 위치(닫힌 레이아웃 기준).
+        public Vector3 GetSlotWorldPosition(int layoutIndex)
+        {
+            if (content == null) return transform.position;
+            float x = paddingStart + layoutIndex * spacing;
+            return content.TransformPoint(new Vector3(x, 0f, 0f));
+        }
+
         // 아이템이 슬롯/구역에 배치되어 스크롤을 완전히 떠났을 때: 빈자리 메꿈.
         public void EndLeaving()
         {
