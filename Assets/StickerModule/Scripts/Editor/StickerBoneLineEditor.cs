@@ -53,12 +53,13 @@ namespace Gunter.Sticker.EditorTools
             var t = line.transform;
             var pts = line.EditablePoints;
 
-            // 점 이동 핸들.
+            // 점 이동 핸들(줌에 따라 크기 일정하게).
             for (int i = 0; i < pts.Count; i++)
             {
                 Vector3 world = t.TransformPoint(pts[i]);
+                float hs = HandleUtility.GetHandleSize(world) * 0.08f;
                 EditorGUI.BeginChangeCheck();
-                Vector3 moved = Handles.FreeMoveHandle(world, 0.08f, Vector3.zero, Handles.SphereHandleCap);
+                Vector3 moved = Handles.FreeMoveHandle(world, hs, Vector3.zero, Handles.SphereHandleCap);
                 if (EditorGUI.EndChangeCheck())
                 {
                     Undo.RecordObject(line, "Move Point");
@@ -67,21 +68,31 @@ namespace Gunter.Sticker.EditorTools
                 }
             }
 
-            // 선 그리기.
-            Handles.color = Color.cyan;
-            for (int i = 0; i < pts.Count - 1; i++)
-                Handles.DrawLine(t.TransformPoint(pts[i]), t.TransformPoint(pts[i + 1]), 2f);
+            // 선/본 미리보기는 Repaint 때만 그린다(깜빡임 방지).
+            if (Event.current.type == EventType.Repaint)
+            {
+                Handles.color = Color.cyan;
+                for (int i = 0; i < pts.Count - 1; i++)
+                    Handles.DrawLine(t.TransformPoint(pts[i]), t.TransformPoint(pts[i + 1]), 3f);
 
-            // 본 위치 미리보기.
-            Handles.color = Color.yellow;
-            var bones = line.SampleBonePositions();
-            for (int i = 0; i < bones.Length; i++)
-                Handles.SphereHandleCap(0, t.TransformPoint(bones[i]), Quaternion.identity, 0.13f, EventType.Repaint);
+                if (pts.Count >= 2)
+                {
+                    Handles.color = Color.yellow;
+                    var bones = line.SampleBonePositions();
+                    for (int i = 0; i < bones.Length; i++)
+                    {
+                        Vector3 w = t.TransformPoint(bones[i]);
+                        float bs = HandleUtility.GetHandleSize(w) * 0.1f;
+                        Handles.SphereHandleCap(0, w, Quaternion.identity, bs, EventType.Repaint);
+                    }
+                }
+            }
 
             // 그리기 모드: 클릭으로 점 추가.
             if (drawMode)
             {
-                HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
+                int id = GUIUtility.GetControlID(FocusType.Passive);
+                HandleUtility.AddDefaultControl(id);
 
                 Event e = Event.current;
                 if (e.type == EventType.MouseDown && e.button == 0)
@@ -97,7 +108,6 @@ namespace Gunter.Sticker.EditorTools
                         e.Use();
                     }
                 }
-                SceneView.RepaintAll();
             }
         }
     }
