@@ -19,8 +19,8 @@ namespace Gunter.Sticker
         [Header("Roll Wrap")]
         [SerializeField] private bool autoAxis = true;               // 선 방향에 수직인 축으로 자동(면이 Z앞으로 말림)
         [SerializeField] private Vector3 bendAxis = Vector3.up;      // autoAxis 끌 때 쓰는 수동 축(로컬)
-        [SerializeField] private float bendAnglePerBone = 14f;       // 본당 굽힘 각도(도, 클수록 강하게 말림)
-        [SerializeField] private float rollBand = 0.7f;              // 말림 전이 폭(0~1, 클수록 완만하게=부드럽게 풀림)
+        [SerializeField] private float bendAnglePerBone = 32f;       // 본당 굽힘 각도(도). 본수×이 값이 총 말림. 45°×8≈한바퀴
+        [SerializeField] private float rollBand = 0.5f;              // 말림 전이 폭(0~1). 작을수록 국소적인 "감기는 가장자리"
         [SerializeField] private bool reverse = false;               // 끝→시작 방향으로 말기
         [SerializeField] private float duration = 0.5f;
 
