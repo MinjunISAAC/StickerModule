@@ -42,9 +42,9 @@ namespace Gunter.Sticker
         [SerializeField] private bool applyMaskInteraction = true;
 
         [Header("Scroll")]
-        [SerializeField] private bool useInertia = true;
-        [SerializeField] private float inertiaDamping = 8f;   // 클수록 빨리 멈춤
-        [SerializeField] private float elasticStrength = 12f; // 경계 밖에서 되돌아오는 속도
+        [SerializeField] private bool snapToItem = true;      // 손 놓으면 가장 가까운 아이템 위치로 스냅
+        [SerializeField] private float settleSmoothTime = 0.15f; // 정착 부드러움(작을수록 빠름)
+        [SerializeField] private float momentum = 0.12f;      // 놓을 때 속도 반영량(플릭 넘김)
         [SerializeField] private float elasticLimit = 1.5f;   // 경계 밖 최대 드래그(월드 단위)
 
         [Header("Item Pull (뽑기)")]
@@ -61,11 +61,15 @@ namespace Gunter.Sticker
         private Vector2 pressWorld = Vector2.zero;
         private UI_DraggableSticker candidate = null;
         private float pointerPrevWorldX = 0f;
-        private float velocity = 0f;      // 월드 단위/초
+        private float velocity = 0f;      // 월드 단위/초 (드래그 속도, 플릭 판정용)
         private float minX = 0f;          // content.localPosition.x 허용 최소
         private float maxX = 0f;          // content.localPosition.x 허용 최대(=홈, 왼쪽 정렬)
         private float homeX = 0f;         // 시작 시점 Content 위치(왼쪽 정렬 기준)
         private float contentWidth = 0f;
+
+        private bool settling = false;    // 손 놓은 뒤 목표로 감쇠 이동 중
+        private float targetX = 0f;       // 정착 목표 위치
+        private float smoothVel = 0f;     // SmoothDamp 내부 속도
 
         // --------------------------------------------------
         // Properties
@@ -100,7 +104,7 @@ namespace Gunter.Sticker
         private void Update()
         {
             HandlePointer();
-            if (dragMode != EDragMode.Scroll) UpdateInertia();
+            if (dragMode != EDragMode.Scroll && settling) UpdateSettle();
         }
 
         // --------------------------------------------------
@@ -179,6 +183,7 @@ namespace Gunter.Sticker
                 pressWorld = wp;
                 pointerPrevWorldX = wp.x;
                 velocity = 0f;
+                settling = false; // 잡는 순간 정착 중단
 
                 // 뷰포트 트리거 콜라이더와 겹쳐도 아이템을 정확히 찾도록 전부 검사.
                 candidate = null;
@@ -229,6 +234,7 @@ namespace Gunter.Sticker
             }
             else if (SPointer.Up)
             {
+                if (dragMode == EDragMode.Scroll) BeginSettle();
                 dragMode = EDragMode.None;
                 candidate = null;
             }
@@ -262,28 +268,45 @@ namespace Gunter.Sticker
             return elasticLimit * (1f - 1f / (over / elasticLimit + 1f));
         }
 
-        private void UpdateInertia()
+        // 손을 놓는 순간, 속도(플릭)를 반영해 목표 위치를 정하고 정착을 시작한다.
+        private void BeginSettle()
         {
             if (content == null) return;
 
+            float predicted = content.localPosition.x + velocity * momentum;
+            targetX = ComputeSnap(predicted);
+            smoothVel = velocity;   // 드래그 속도를 이어받아 부드럽게 감쇠
+            settling = true;
+        }
+
+        // 목표 위치를 경계 안으로 클램프하고, 필요하면 가장 가까운 아이템 위치로 스냅.
+        private float ComputeSnap(float x)
+        {
+            float clamped = Mathf.Clamp(x, minX, maxX);
+            if (!snapToItem || spacing <= 0f) return clamped;
+
+            // maxX(홈)에서 spacing 간격으로 아이템이 정렬되므로, 그 격자에 맞춘다.
+            float steps = Mathf.Round((maxX - clamped) / spacing);
+            float snapped = maxX - steps * spacing;
+            return Mathf.Clamp(snapped, minX, maxX);
+        }
+
+        // 목표 위치로 임계감쇠 이동(SmoothDamp) → 오버슈트/진동 없이 딱 멈춘다.
+        private void UpdateSettle()
+        {
+            if (content == null) { settling = false; return; }
+
             float x = content.localPosition.x;
+            x = Mathf.SmoothDamp(x, targetX, ref smoothVel, settleSmoothTime);
 
-            // 경계 밖이면 탄성으로 되돌린다.
-            if (x > maxX || x < minX)
+            if (Mathf.Abs(x - targetX) < 0.001f && Mathf.Abs(smoothVel) < 0.01f)
             {
-                float target = x > maxX ? maxX : minX;
-                x = Mathf.Lerp(x, target, Time.deltaTime * elasticStrength);
-                if (Mathf.Abs(x - target) < 0.001f) x = target;
+                x = targetX;
+                smoothVel = 0f;
+                settling = false;
+            }
 
-                velocity = 0f;
-                content.localPosition = new Vector3(x, content.localPosition.y, content.localPosition.z);
-            }
-            // 경계 안이면 관성으로 감속.
-            else if (useInertia && Mathf.Abs(velocity) > 0.01f)
-            {
-                velocity = Mathf.Lerp(velocity, 0f, Time.deltaTime * inertiaDamping);
-                MoveContent(velocity * Time.deltaTime, true);
-            }
+            content.localPosition = new Vector3(x, content.localPosition.y, content.localPosition.z);
         }
 
         private Vector2 ScreenToWorld(Vector3 screen)
