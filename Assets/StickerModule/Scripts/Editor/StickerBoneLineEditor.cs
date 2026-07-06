@@ -54,12 +54,20 @@ namespace Gunter.Sticker.EditorTools
                 baked ? $"✓ 스킨 베이크 완료 (본 {smr.bones.Length}개)" : "아직 베이크 안 됨",
                 baked ? MessageType.Info : MessageType.Warning);
 
-            if (GUILayout.Button("Bake Skinned (이 오브젝트)"))
+            using (new EditorGUILayout.HorizontalScope())
             {
-                StickerMeshBaker.BakeSkinned(line.gameObject);
-                UnityEditor.AssetDatabase.SaveAssets();
-                UnityEditor.AssetDatabase.Refresh();
+                if (GUILayout.Button("Bake Skinned (이 오브젝트)"))
+                {
+                    StickerMeshBaker.BakeSkinned(line.gameObject);
+                    UnityEditor.AssetDatabase.SaveAssets();
+                    UnityEditor.AssetDatabase.Refresh();
+                }
+                if (GUILayout.Button("베이크 제거 (Clear Bake)"))
+                {
+                    StickerMeshBaker.ClearBake(line.gameObject);
+                }
             }
+            EditorGUILayout.HelpBox("선을 리셋해도 이미 구워진 본은 남아있습니다. 새로 그리려면 '베이크 제거' 후 다시 그리고 Bake 하세요.", MessageType.None);
         }
 
         private void OnSceneGUI()

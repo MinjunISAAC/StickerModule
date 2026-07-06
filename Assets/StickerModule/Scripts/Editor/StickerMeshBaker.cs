@@ -173,6 +173,21 @@ namespace Gunter.Sticker.EditorTools
             return true;
         }
 
+        // 베이크 결과(WrapMesh 자식: 메시/본/렌더러)를 통째로 제거하고 스프라이트로 되돌린다.
+        public static void ClearBake(GameObject go)
+        {
+            if (go == null) return;
+            var sr = go.GetComponent<SpriteRenderer>();
+            if (sr == null) sr = go.GetComponentInParent<SpriteRenderer>();
+            var root = sr != null ? sr.gameObject : go;
+
+            var child = root.transform.Find(MESH_CHILD);
+            if (child != null) Object.DestroyImmediate(child.gameObject);
+
+            if (sr != null) sr.enabled = true;
+            EditorUtility.SetDirty(root);
+        }
+
         private static void BakeSkinnedOne(GameObject go, SpriteRenderer sr, UI_StickerBoneLine line)
         {
             var sprite = sr.sprite;
