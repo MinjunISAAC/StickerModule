@@ -22,6 +22,10 @@ namespace Gunter.Sticker.EditorTools
         private const string MESH_DIR = "Assets/StickerModule/Meshes/Baked";
         private const string MAT_DIR = "Assets/StickerModule/Materials/Baked";
 
+        // SpriteRenderer 와 MeshRenderer 는 같은 오브젝트에 공존할 수 없으므로
+        // 메시는 이 이름의 자식 오브젝트에 둔다.
+        private const string MESH_CHILD = "WrapMesh";
+
         [MenuItem("Tools/Gunter Sticker/Bake Mesh From Sprite")]
         public static void BakeSelection()
         {
@@ -65,23 +69,35 @@ namespace Gunter.Sticker.EditorTools
 
             var mat = GetOrCreateMaterial(sprite.texture);
 
-            // MeshFilter / MeshRenderer 세팅.
-            var mf = go.GetComponent<MeshFilter>();
-            if (mf == null) mf = go.AddComponent<MeshFilter>();
+            // 메시는 별도 자식("WrapMesh")에 둔다(SpriteRenderer 와 공존 불가).
+            Transform child = go.transform.Find(MESH_CHILD);
+            if (child == null)
+            {
+                var childGo = new GameObject(MESH_CHILD);
+                child = childGo.transform;
+                child.SetParent(go.transform, false);
+            }
+            child.localPosition = Vector3.zero;
+            child.localRotation = Quaternion.identity;
+            child.localScale = Vector3.one;
+            var childObj = child.gameObject;
+
+            var mf = childObj.GetComponent<MeshFilter>();
+            if (mf == null) mf = childObj.AddComponent<MeshFilter>();
             mf.sharedMesh = mesh;
 
-            var mr = go.GetComponent<MeshRenderer>();
-            if (mr == null) mr = go.AddComponent<MeshRenderer>();
+            var mr = childObj.GetComponent<MeshRenderer>();
+            if (mr == null) mr = childObj.AddComponent<MeshRenderer>();
             mr.sharedMaterial = mat;
             mr.sortingLayerID = sr.sortingLayerID; // 정렬 유지
             mr.sortingOrder = sr.sortingOrder;
             mr.enabled = false; // 스크롤/드래그 중엔 스프라이트, 배치 순간에 켬
 
             // wrap 연출 컴포넌트 부착(배치 시점에 UI_DraggableSticker 가 재생).
-            if (go.GetComponent<UI_StickerMeshWrap>() == null)
-                go.AddComponent<UI_StickerMeshWrap>();
+            if (childObj.GetComponent<UI_StickerMeshWrap>() == null)
+                childObj.AddComponent<UI_StickerMeshWrap>();
 
-            // 스프라이트 렌더러는 그대로 유지(스크롤/드래그용).
+            // 스프라이트 렌더러는 부모에 그대로 유지(스크롤/드래그용).
 
             EditorUtility.SetDirty(go);
         }

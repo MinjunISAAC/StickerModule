@@ -43,8 +43,8 @@ namespace Gunter.Sticker
         private void Awake()
         {
             sr = GetComponent<SpriteRenderer>();
-            meshRenderer = GetComponent<MeshRenderer>();   // 구워둔 경우에만 존재
-            meshWrap = GetComponent<UI_StickerMeshWrap>();
+            meshRenderer = GetComponentInChildren<MeshRenderer>(true);      // 자식 "WrapMesh"(구운 경우)
+            meshWrap = GetComponentInChildren<UI_StickerMeshWrap>(true);
             baseOrder = sr.sortingOrder;
             baseScale = transform.localScale;
         }
