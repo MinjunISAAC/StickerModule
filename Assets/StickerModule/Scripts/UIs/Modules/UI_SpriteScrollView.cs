@@ -10,6 +10,7 @@ namespace Gunter.Sticker
     //  - 제스처 : 가로로 끌면 스크롤, 위로 끌면 해당 아이템을 뽑기(Pull)로 위임.
     //  - 로직   : Content 이동 + 관성(inertia) + 경계 탄성(elastic) 을 직접 구현.
     // --------------------------------------------------
+    [ExecuteAlways] // 에디터에서도 배열(레이아웃)이 보이도록
     [RequireComponent(typeof(BoxCollider2D))]
     public class UI_SpriteScrollView : MonoBehaviour
     {
@@ -103,8 +104,40 @@ namespace Gunter.Sticker
 
         private void Update()
         {
+            // 에디터(비플레이)에서는 배열만 갱신하고 입력/스크롤 로직은 돌리지 않는다.
+            if (!Application.isPlaying)
+            {
+                EditorRelayoutIfDirty();
+                return;
+            }
+
             HandlePointer();
             if (dragMode != EDragMode.Scroll && settling) UpdateSettle();
+        }
+
+        // --------------------------------------------------
+        // Editor Layout - 파라미터/자식 개수가 바뀌면 재배열
+        // --------------------------------------------------
+        private int _lastCount = -1;
+        private float _lastSpacing, _lastPadStart, _lastPadEnd;
+
+        private void EditorRelayoutIfDirty()
+        {
+            if (content == null) return;
+
+            bool changed =
+                content.childCount != _lastCount ||
+                !Mathf.Approximately(spacing, _lastSpacing) ||
+                !Mathf.Approximately(paddingStart, _lastPadStart) ||
+                !Mathf.Approximately(paddingEnd, _lastPadEnd);
+            if (!changed) return;
+
+            _lastCount = content.childCount;
+            _lastSpacing = spacing;
+            _lastPadStart = paddingStart;
+            _lastPadEnd = paddingEnd;
+
+            Rebuild();
         }
 
         // --------------------------------------------------
