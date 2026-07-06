@@ -84,6 +84,16 @@ namespace Gunter.Sticker.EditorTools
 
                 // 붙을 때 wrap 연출이 바로 보이도록 미리 굽는다(정점 방식).
                 StickerMeshBaker.BakeSprite(itemGo);
+
+                // 가상의 본(선) 편집 기능을 바로 쓸 수 있게: UI_StickerBoneLine + 기본 가로선.
+                // 아이템 선택 → 인스펙터에서 "그리기 모드" + Bone Count, 씬에 노란 본 미리보기.
+                var boneLine = itemGo.AddComponent<UI_StickerBoneLine>();
+                if (sprite != null)
+                {
+                    float hw = sprite.bounds.extents.x * 0.8f;
+                    boneLine.AddPoint(new Vector3(-hw, 0f, 0f));
+                    boneLine.AddPoint(new Vector3(hw, 0f, 0f));
+                }
             }
 
             // 스크롤뷰 private 필드 배선.
@@ -128,7 +138,9 @@ namespace Gunter.Sticker.EditorTools
 
             Debug.Log("[StickerSampleBuilder] 샘플 생성 완료. Play 버튼으로 테스트하세요.\n" +
                       "- 아래 스크롤 목록을 좌우로 끌면 스크롤, 아이템을 위로 끌면 뽑힙니다.\n" +
-                      "- 노란 슬롯 근처에 놓으면 그 점에 스냅, 초록 구역(FreeZone) 안에 놓으면 그 위치에 붙습니다.");
+                      "- 노란 슬롯 근처에 놓으면 그 점에 스냅, 초록 구역(FreeZone) 안에 놓으면 그 위치에 붙습니다.\n" +
+                      "- 각 Item 에 UI_StickerBoneLine(기본 가로선) 부착됨: 선택 후 '그리기 모드'로 본을 편집하고\n" +
+                      "  [Tools > Gunter Sticker > Bake Skinned Mesh]로 본 방식으로 구울 수 있습니다.");
         }
 
         // --------------------------------------------------
