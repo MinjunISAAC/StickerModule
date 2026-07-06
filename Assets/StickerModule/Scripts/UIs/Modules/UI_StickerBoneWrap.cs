@@ -88,7 +88,9 @@ namespace Gunter.Sticker
             {
                 t += Time.deltaTime / Mathf.Max(0.0001f, duration);
                 float p = Mathf.Clamp01(t);
-                float eased = overshoot ? EaseOutBack(p) : EaseOutCubic(p);
+                // 기본은 ease-in-out(SmoothStep)으로 시간 전체에 고르게 풀림.
+                // overshoot 켜면 마지막에 살짝 튕김(EaseOutBack).
+                float eased = overshoot ? EaseOutBack(p) : Mathf.SmoothStep(0f, 1f, p);
                 ApplyRoll(eased); // 0=말림 → 1=평평, 시작쪽부터 풀림
                 yield return null;
             }
@@ -171,12 +173,6 @@ namespace Gunter.Sticker
         // --------------------------------------------------
         // Easing
         // --------------------------------------------------
-        private static float EaseOutCubic(float t)
-        {
-            float u = 1f - t;
-            return 1f - u * u * u;
-        }
-
         private static float EaseOutBack(float t)
         {
             const float c1 = 1.70158f;
