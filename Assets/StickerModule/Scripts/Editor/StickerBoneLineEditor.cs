@@ -1,0 +1,104 @@
+using UnityEditor;
+using UnityEngine;
+
+namespace Gunter.Sticker.EditorTools
+{
+    // --------------------------------------------------
+    // UI_StickerBoneLine 편집기.
+    //  - 그리기 모드에서 씬을 클릭하면 스티커 평면 위에 선 점이 추가된다.
+    //  - 각 점은 씬 핸들로 이동 가능.
+    //  - Bone Count 만큼 선을 따라 본 위치(노란 점)를 미리보기.
+    // --------------------------------------------------
+    [CustomEditor(typeof(UI_StickerBoneLine))]
+    public class StickerBoneLineEditor : Editor
+    {
+        private bool drawMode = false;
+
+        public override void OnInspectorGUI()
+        {
+            DrawDefaultInspector();
+            var line = (UI_StickerBoneLine)target;
+
+            EditorGUILayout.Space();
+            drawMode = GUILayout.Toggle(
+                drawMode,
+                drawMode ? "✏️ 그리기 모드: ON (씬에서 클릭해 점 추가)" : "그리기 모드 켜기",
+                "Button");
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("마지막 점 삭제"))
+                {
+                    Undo.RecordObject(line, "Remove Point");
+                    line.RemoveLast();
+                    EditorUtility.SetDirty(line);
+                }
+                if (GUILayout.Button("전체 지우기"))
+                {
+                    Undo.RecordObject(line, "Clear Points");
+                    line.ClearPoints();
+                    EditorUtility.SetDirty(line);
+                }
+            }
+
+            EditorGUILayout.HelpBox(
+                "그리기 모드를 켜고 스티커 위를 클릭하면 선 점이 추가됩니다.\n" +
+                "점은 씬의 구(sphere) 핸들로 이동할 수 있고, 선을 따라 Bone Count 개의 본(노란 점)이 균등 분포됩니다.",
+                MessageType.Info);
+        }
+
+        private void OnSceneGUI()
+        {
+            var line = (UI_StickerBoneLine)target;
+            var t = line.transform;
+            var pts = line.EditablePoints;
+
+            // 점 이동 핸들.
+            for (int i = 0; i < pts.Count; i++)
+            {
+                Vector3 world = t.TransformPoint(pts[i]);
+                EditorGUI.BeginChangeCheck();
+                Vector3 moved = Handles.FreeMoveHandle(world, 0.08f, Vector3.zero, Handles.SphereHandleCap);
+                if (EditorGUI.EndChangeCheck())
+                {
+                    Undo.RecordObject(line, "Move Point");
+                    pts[i] = t.InverseTransformPoint(moved);
+                    EditorUtility.SetDirty(line);
+                }
+            }
+
+            // 선 그리기.
+            Handles.color = Color.cyan;
+            for (int i = 0; i < pts.Count - 1; i++)
+                Handles.DrawLine(t.TransformPoint(pts[i]), t.TransformPoint(pts[i + 1]), 2f);
+
+            // 본 위치 미리보기.
+            Handles.color = Color.yellow;
+            var bones = line.SampleBonePositions();
+            for (int i = 0; i < bones.Length; i++)
+                Handles.SphereHandleCap(0, t.TransformPoint(bones[i]), Quaternion.identity, 0.13f, EventType.Repaint);
+
+            // 그리기 모드: 클릭으로 점 추가.
+            if (drawMode)
+            {
+                HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
+
+                Event e = Event.current;
+                if (e.type == EventType.MouseDown && e.button == 0)
+                {
+                    Ray ray = HandleUtility.GUIPointToWorldRay(e.mousePosition);
+                    Plane plane = new Plane(t.forward, t.position); // 오브젝트 XY 평면
+                    if (plane.Raycast(ray, out float enter))
+                    {
+                        Vector3 hit = ray.GetPoint(enter);
+                        Undo.RecordObject(line, "Add Point");
+                        line.AddPoint(t.InverseTransformPoint(hit));
+                        EditorUtility.SetDirty(line);
+                        e.Use();
+                    }
+                }
+                SceneView.RepaintAll();
+            }
+        }
+    }
+}
