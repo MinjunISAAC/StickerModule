@@ -57,6 +57,18 @@ namespace Gunter.Sticker.EditorTools
         // --------------------------------------------------
         // Bake One
         // --------------------------------------------------
+        // 외부(샘플 빌더 등)에서 단일 오브젝트를 정점-wrap 메시로 굽는 진입점.
+        public static void BakeSprite(GameObject go)
+        {
+            if (go == null) return;
+            var sr = go.GetComponent<SpriteRenderer>();
+            if (sr == null || sr.sprite == null) return;
+
+            EnsureFolder(MESH_DIR);
+            EnsureFolder(MAT_DIR);
+            BakeOne(go, sr);
+        }
+
         private static void BakeOne(GameObject go, SpriteRenderer sr)
         {
             var sprite = sr.sprite;

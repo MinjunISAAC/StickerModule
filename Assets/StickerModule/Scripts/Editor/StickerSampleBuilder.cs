@@ -81,6 +81,9 @@ namespace Gunter.Sticker.EditorTools
                 if (sprite != null) col.size = sprite.bounds.size;
 
                 itemGo.AddComponent<UI_DraggableSticker>();
+
+                // 붙을 때 wrap 연출이 바로 보이도록 미리 굽는다(정점 방식).
+                StickerMeshBaker.BakeSprite(itemGo);
             }
 
             // 스크롤뷰 private 필드 배선.
@@ -116,6 +119,9 @@ namespace Gunter.Sticker.EditorTools
             freeZoneGo.transform.SetParent(root.transform, false);
             freeZoneGo.transform.position = new Vector3(0f, 3.2f, 0f);
             freeZoneGo.AddComponent<UI_StickerDropZone>();
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
 
             Selection.activeGameObject = root;
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
