@@ -18,8 +18,8 @@ namespace Gunter.Sticker
         // --------------------------------------------------
         [Header("Roll Wrap")]
         [SerializeField] private Vector3 bendAxis = Vector3.forward; // 감기는 회전 축(로컬)
-        [SerializeField] private float bendAnglePerBone = 20f;       // 본당 굽힘 각도(도, 클수록 강하게 말림)
-        [SerializeField] private float rollBand = 0.4f;              // 말림 전이 폭(0~1, 클수록 완만하게 풀림)
+        [SerializeField] private float bendAnglePerBone = 14f;       // 본당 굽힘 각도(도, 클수록 강하게 말림)
+        [SerializeField] private float rollBand = 0.7f;              // 말림 전이 폭(0~1, 클수록 완만하게=부드럽게 풀림)
         [SerializeField] private bool reverse = false;               // 끝→시작 방향으로 말기
         [SerializeField] private float duration = 0.5f;
 

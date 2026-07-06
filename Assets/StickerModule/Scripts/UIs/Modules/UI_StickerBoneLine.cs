@@ -15,7 +15,7 @@ namespace Gunter.Sticker
         // Components
         // --------------------------------------------------
         [SerializeField] private List<Vector3> points = new List<Vector3>(); // 로컬 공간 선
-        [Min(2)] [SerializeField] private int boneCount = 5;                  // 선 위 본 개수
+        [Min(2)] [SerializeField] private int boneCount = 8;                  // 선 위 본 개수(많을수록 매끄러움)
 
         // --------------------------------------------------
         // Properties

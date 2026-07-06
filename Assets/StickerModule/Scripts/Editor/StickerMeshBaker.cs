@@ -264,34 +264,65 @@ namespace Gunter.Sticker.EditorTools
         }
 
         // 정점을 본 폴리라인에 투영해 가장 가까운 세그먼트의 두 본에 가중치 분배.
+        // 정점을 본 폴리라인에 투영해 "본 인덱스 좌표"를 구하고,
+        // 인접 본 여러 개(최대 4)에 smoothstep falloff 로 부드럽게 분배 → 연속적인 변형(깨짐 방지).
         private static BoneWeight ComputeWeight(Vector3 v, Vector3[] boneLocal)
         {
-            int bestSeg = 0;
-            float bestT = 0f;
-            float bestDist = float.MaxValue;
+            int n = boneLocal.Length;
 
-            for (int i = 0; i < boneLocal.Length - 1; i++)
+            // 1) 폴리라인 투영 → coord ∈ [0, n-1] (본 인덱스 공간)
+            float coord = 0f;
+            if (n > 1)
             {
-                Vector3 a = boneLocal[i];
-                Vector3 ab = boneLocal[i + 1] - a;
-                float len2 = ab.sqrMagnitude;
-                float t = len2 > 1e-8f ? Mathf.Clamp01(Vector3.Dot(v - a, ab) / len2) : 0f;
-                float d = (v - (a + ab * t)).sqrMagnitude;
-                if (d < bestDist) { bestDist = d; bestSeg = i; bestT = t; }
+                float bestDist = float.MaxValue;
+                for (int i = 0; i < n - 1; i++)
+                {
+                    Vector3 a = boneLocal[i];
+                    Vector3 ab = boneLocal[i + 1] - a;
+                    float len2 = ab.sqrMagnitude;
+                    float t = len2 > 1e-8f ? Mathf.Clamp01(Vector3.Dot(v - a, ab) / len2) : 0f;
+                    float d = (v - (a + ab * t)).sqrMagnitude;
+                    if (d < bestDist) { bestDist = d; coord = i + t; }
+                }
             }
 
-            var w = new BoneWeight
-            {
-                boneIndex0 = bestSeg,
-                weight0 = 1f - bestT,
-                boneIndex1 = Mathf.Min(bestSeg + 1, boneLocal.Length - 1),
-                weight1 = bestT,
-            };
+            // 2) coord 주변 본들에 부드러운 가중치
+            const float radius = 1.6f;
+            int baseI = Mathf.FloorToInt(coord);
 
-            float sum = w.weight0 + w.weight1;
-            if (sum < 1e-5f) { w.weight0 = 1f; w.weight1 = 0f; }
-            else { w.weight0 /= sum; w.weight1 /= sum; }
-            return w;
+            int i0 = 0, i1 = 0, i2 = 0, i3 = 0;
+            float w0 = 0f, w1 = 0f, w2 = 0f, w3 = 0f;
+            int slot = 0;
+            for (int k = -1; k <= 2 && slot < 4; k++)
+            {
+                int i = baseI + k;
+                if (i < 0 || i >= n) continue;
+
+                float x = Mathf.Clamp01(1f - Mathf.Abs(i - coord) / radius);
+                float w = x * x * (3f - 2f * x); // smoothstep falloff
+                if (w <= 0f) continue;
+
+                switch (slot)
+                {
+                    case 0: i0 = i; w0 = w; break;
+                    case 1: i1 = i; w1 = w; break;
+                    case 2: i2 = i; w2 = w; break;
+                    case 3: i3 = i; w3 = w; break;
+                }
+                slot++;
+            }
+            if (slot == 0) { i0 = Mathf.Clamp(baseI, 0, n - 1); w0 = 1f; }
+
+            float sum = w0 + w1 + w2 + w3;
+            if (sum < 1e-6f) { w0 = 1f; sum = 1f; }
+
+            return new BoneWeight
+            {
+                boneIndex0 = i0, weight0 = w0 / sum,
+                boneIndex1 = i1, weight1 = w1 / sum,
+                boneIndex2 = i2, weight2 = w2 / sum,
+                boneIndex3 = i3, weight3 = w3 / sum,
+            };
         }
 
         private static void RemoveIfExists<T>(GameObject go) where T : Component
