@@ -153,13 +153,19 @@ namespace Gunter.Sticker
 
         // 스프라이트 → 구워둔 격자 메시로 바꾸고 wrap 재생.
         // (메시를 굽지 않았다면 스프라이트 그대로 둔다.)
+        // 붙는 순간: 스프라이트 끄고 → 메시로 wrap 연출 → 끝나면 다시 스프라이트로.
         private void PlaceAsWrappedMesh()
         {
             if (wrap == null) return; // 굽지 않았으면 스프라이트 그대로
 
             if (sr != null) sr.enabled = false;
-            wrap.ResetFlat();
-            wrap.PlayWrap();
+            wrap.PlayWrap(OnWrapComplete);
+        }
+
+        private void OnWrapComplete()
+        {
+            wrap.Hide();                       // 메시 렌더러 끄기
+            if (sr != null) sr.enabled = true; // 최종 상태는 다시 SpriteRenderer
         }
     }
 }

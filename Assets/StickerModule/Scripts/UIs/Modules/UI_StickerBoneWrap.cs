@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
@@ -31,6 +32,7 @@ namespace Gunter.Sticker
         private Transform[] bones = null;
         private Quaternion[] restRot = null;
         private Coroutine playing = null;
+        private Action onComplete = null;
 
         // --------------------------------------------------
         // Unity
@@ -51,24 +53,27 @@ namespace Gunter.Sticker
 
         private void OnEnable()
         {
-            if (autoPlayOnEnable) PlayWrap();
+            if (autoPlayOnEnable) PlayWrap(null);
         }
 
         // --------------------------------------------------
         // IStickerWrap
         // --------------------------------------------------
-        public void ResetFlat()
+        public void PlayWrap(Action onComplete)
         {
-            if (smr != null) smr.enabled = true;
-            ApplyBend(0f); // 굽힘 0 = 평평
-        }
+            this.onComplete = onComplete;
 
-        public void PlayWrap()
-        {
-            if (smr == null || bones == null) return;
+            if (smr == null || bones == null) { onComplete?.Invoke(); return; }
+
             smr.enabled = true;
             if (playing != null) StopCoroutine(playing);
             playing = StartCoroutine(CoPlay());
+        }
+
+        public void Hide()
+        {
+            ApplyBend(0f); // 평평(rest)
+            if (smr != null) smr.enabled = false;
         }
 
         // --------------------------------------------------
@@ -88,6 +93,7 @@ namespace Gunter.Sticker
             }
             ApplyBend(0f);
             playing = null;
+            onComplete?.Invoke();
         }
 
         // amount: 0=평평, 1=최대 굽힘. 체인이라 본마다 같은 각을 주면 호(arc)가 된다.

@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
@@ -10,7 +11,7 @@ namespace Gunter.Sticker
     //    깊이(Z) 굽힘도 함께 주어 Lit/원근 카메라에서도 자연스럽게 동작.
     //  - 공유 메시 에셋을 건드리지 않도록 런타임 인스턴스를 복제해서 변형.
     //
-    // 붙는 순간 PlayWrap() 을 호출하면 평평 → 곡면 conform 으로 안정화된다.
+    // 붙는 순간 PlayWrap 을 호출하면 곡면 → 평평으로 안정화되고, 끝나면 다시 SpriteRenderer 로 전환된다.
     // --------------------------------------------------
     [RequireComponent(typeof(MeshFilter))]
     public class UI_StickerMeshWrap : MonoBehaviour, IStickerWrap
@@ -48,6 +49,7 @@ namespace Gunter.Sticker
         private Vector3 center = Vector3.zero;
         private Vector2 size = Vector2.one;
         private Coroutine playing = null;
+        private Action onComplete = null;
 
         // --------------------------------------------------
         // Unity
@@ -73,33 +75,27 @@ namespace Gunter.Sticker
 
         private void OnEnable()
         {
-            if (autoPlayOnEnable) PlayWrap();
+            if (autoPlayOnEnable) PlayWrap(null);
         }
 
         // --------------------------------------------------
-        // Public API
+        // IStickerWrap
         // --------------------------------------------------
-        public void PlayWrap()
+        public void PlayWrap(Action onComplete)
         {
+            this.onComplete = onComplete;
+
             if (rend != null) rend.enabled = true;
-            if (mesh == null) return;
+            if (mesh == null) { onComplete?.Invoke(); return; }
+
             if (playing != null) StopCoroutine(playing);
             playing = StartCoroutine(CoPlay());
         }
 
-        // 즉시 최종 곡면 상태로.
-        public void SetWrapped()
+        public void Hide()
         {
-            ApplyWrap(1f);
-        }
-
-        // 평평한 원본 상태로.
-        public void ResetFlat()
-        {
-            if (rend != null) rend.enabled = true;
-            if (mesh == null) return;
-            mesh.vertices = baseVerts;
-            mesh.RecalculateBounds();
+            if (mesh != null) { mesh.vertices = baseVerts; mesh.RecalculateBounds(); }
+            if (rend != null) rend.enabled = false;
         }
 
         // --------------------------------------------------
@@ -112,11 +108,14 @@ namespace Gunter.Sticker
             {
                 t += Time.deltaTime / Mathf.Max(0.0001f, duration);
                 float p = Mathf.Clamp01(t);
-                ApplyWrap(overshoot ? EaseOutBack(p) : EaseOutCubic(p));
+                // 곡면(1) → 평평(0)으로 붙어 안정화. 끝이 평평해 SpriteRenderer 와 매끄럽게 이어짐.
+                float eased = overshoot ? EaseOutBack(p) : EaseOutCubic(p);
+                ApplyWrap(1f - eased);
                 yield return null;
             }
-            ApplyWrap(1f);
+            ApplyWrap(0f);
             playing = null;
+            onComplete?.Invoke();
         }
 
         // amount: 0(평평) ~ 1(최종 곡면). overshoot 시 1을 살짝 넘을 수 있음.
