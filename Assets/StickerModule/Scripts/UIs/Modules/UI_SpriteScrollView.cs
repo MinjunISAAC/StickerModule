@@ -209,7 +209,8 @@ namespace Gunter.Sticker
                     // 위로 충분히 끌었고, 세로 성분이 가로보다 크면 → 뽑기로 위임
                     if (candidate != null && dy > pullThreshold && dy >= Mathf.Abs(dx))
                     {
-                        candidate.BeginPull(this, targetCamera, wp);
+                        // 처음 누른 지점 기준으로 잡아야 밀리지 않는다.
+                        candidate.BeginPull(this, targetCamera, pressWorld);
                         dragMode = EDragMode.None; // 이후 입력은 아이템이 처리
                         candidate = null;
                         return;
