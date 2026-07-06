@@ -166,9 +166,9 @@ namespace Gunter.Sticker
         // --------------------------------------------------
         private void HandlePointer()
         {
-            if (Input.GetMouseButtonDown(0))
+            if (SPointer.Down)
             {
-                Vector2 wp = ScreenToWorld(Input.mousePosition);
+                Vector2 wp = ScreenToWorld(SPointer.Position);
                 if (!viewportCollider.OverlapPoint(wp)) return;
 
                 pressWorld = wp;
@@ -185,9 +185,9 @@ namespace Gunter.Sticker
                 }
                 dragMode = EDragMode.Undecided;
             }
-            else if (Input.GetMouseButton(0) && dragMode != EDragMode.None)
+            else if (SPointer.Held && dragMode != EDragMode.None)
             {
-                Vector2 wp = ScreenToWorld(Input.mousePosition);
+                Vector2 wp = ScreenToWorld(SPointer.Position);
 
                 if (dragMode == EDragMode.Undecided)
                 {
@@ -222,7 +222,7 @@ namespace Gunter.Sticker
                         velocity = Mathf.Lerp(velocity, delta / Time.deltaTime, 0.5f);
                 }
             }
-            else if (Input.GetMouseButtonUp(0))
+            else if (SPointer.Up)
             {
                 dragMode = EDragMode.None;
                 candidate = null;

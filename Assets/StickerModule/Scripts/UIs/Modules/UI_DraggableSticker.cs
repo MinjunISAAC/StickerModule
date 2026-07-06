@@ -48,9 +48,9 @@ namespace Gunter.Sticker
         {
             if (!isPulled) return;
 
-            if (Input.GetMouseButton(0))
+            if (SPointer.Held)
             {
-                Vector3 wp = cam.ScreenToWorldPoint(Input.mousePosition);
+                Vector3 wp = cam.ScreenToWorldPoint(SPointer.Position);
                 wp.z = transform.position.z;
                 transform.position = wp + grabOffset;
             }
