@@ -45,6 +45,21 @@ namespace Gunter.Sticker.EditorTools
                 "그리기 모드를 켜고 스티커 위를 클릭하면 선 점이 추가됩니다.\n" +
                 "점은 씬의 구(sphere) 핸들로 이동할 수 있고, 선을 따라 Bone Count 개의 본(노란 점)이 균등 분포됩니다.",
                 MessageType.Info);
+
+            // 베이크 상태 표시.
+            EditorGUILayout.Space();
+            var smr = line.GetComponentInChildren<SkinnedMeshRenderer>(true);
+            bool baked = smr != null && smr.bones != null && smr.bones.Length > 0;
+            EditorGUILayout.HelpBox(
+                baked ? $"✓ 스킨 베이크 완료 (본 {smr.bones.Length}개)" : "아직 베이크 안 됨",
+                baked ? MessageType.Info : MessageType.Warning);
+
+            if (GUILayout.Button("Bake Skinned (이 오브젝트)"))
+            {
+                StickerMeshBaker.BakeSkinned(line.gameObject);
+                UnityEditor.AssetDatabase.SaveAssets();
+                UnityEditor.AssetDatabase.Refresh();
+            }
         }
 
         private void OnSceneGUI()

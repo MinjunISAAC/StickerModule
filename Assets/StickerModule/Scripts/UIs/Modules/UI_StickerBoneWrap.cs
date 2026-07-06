@@ -121,6 +121,29 @@ namespace Gunter.Sticker
         }
 
         // --------------------------------------------------
+        // Editor Preview - Play 없이 롤이 실제로 먹는지 확인(진단/연출 확인용)
+        // --------------------------------------------------
+        [ContextMenu("Preview: Rolled (말린 상태)")]
+        private void PreviewRolled() { EnsureCache(); ApplyRoll(0f); }
+
+        [ContextMenu("Preview: Flat (평평)")]
+        private void PreviewFlat() { EnsureCache(); ApplyRoll(1f); }
+
+        private void EnsureCache()
+        {
+            if (smr == null) smr = GetComponent<SkinnedMeshRenderer>();
+            if (smr == null) return;
+            if (smr.bones != null && (bones == null || bones.Length != smr.bones.Length))
+                bones = smr.bones;
+            if (bones != null && (restRot == null || restRot.Length != bones.Length))
+            {
+                restRot = new Quaternion[bones.Length];
+                for (int i = 0; i < bones.Length; i++)
+                    if (bones[i] != null) restRot[i] = bones[i].localRotation;
+            }
+        }
+
+        // --------------------------------------------------
         // Gizmos - 베이크된 본 체인/방향 표시(초록=시작, 빨강=끝)
         // --------------------------------------------------
         private void OnDrawGizmos()
