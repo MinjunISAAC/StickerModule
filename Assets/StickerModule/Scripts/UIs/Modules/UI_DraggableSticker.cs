@@ -17,9 +17,10 @@ namespace Gunter.Sticker
         // Components
         // --------------------------------------------------
         [Header("Placement FX")]
-        [SerializeField] private float suckDuration = 0.25f; // 빨려들어가는 시간
-        [SerializeField] private float popScale = 1.15f;     // 흡입 중 살짝 커졌다 원복
-        [SerializeField] private int draggingOrder = 100;    // 드래그 중 정렬 순서(맨 위)
+        [SerializeField] private float suckDuration = 0.25f;   // 빨려들어가는 시간
+        [SerializeField] private float returnDuration = 0.25f; // 빈 곳에 놓았을 때 복귀 시간
+        [SerializeField] private float popScale = 1.15f;       // 흡입 중 살짝 커졌다 원복
+        [SerializeField] private int draggingOrder = 100;      // 드래그 중 정렬 순서(맨 위)
 
         // --------------------------------------------------
         // Fields
@@ -110,11 +111,54 @@ namespace Gunter.Sticker
                 return;
             }
 
-            // 유효한 자리 없음 → 스크롤 목록의 원래 순서로 복귀
-            sr.sortingOrder = baseOrder;
-            sr.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
+            // 유효한 자리 없음 → 원래 순서로, 가속하며 미끄러져 복귀
             transform.localScale = baseScale;
-            if (owner != null) owner.ReturnItem(transform, originalSiblingIndex);
+            if (owner != null)
+            {
+                StartCoroutine(CoReturn());
+            }
+            else
+            {
+                sr.sortingOrder = baseOrder;
+                sr.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
+            }
+        }
+
+        // 빈 곳에 놓았을 때: 원래 자리로 가속하며(ease-in) 미끄러져 복귀.
+        private IEnumerator CoReturn()
+        {
+            isPlacing = true; // 복귀 중 재-뽑기 방지
+
+            Vector3 from = transform.position;
+
+            // 원래 순서로 되돌려 최종(정착) 위치를 구한다.
+            owner.ReturnItem(transform, originalSiblingIndex);
+            Vector3 to = transform.position;
+
+            // 비행 중엔 잘리지 않게(마스크 밖) + 맨 위로.
+            if (sr != null)
+            {
+                sr.maskInteraction = SpriteMaskInteraction.None;
+                sr.sortingOrder = draggingOrder;
+            }
+
+            float t = 0f;
+            while (t < 1f)
+            {
+                t += Time.deltaTime / Mathf.Max(0.0001f, returnDuration);
+                float e = Mathf.Clamp01(t); e *= e; // 가속(ease-in)
+                transform.position = Vector3.LerpUnclamped(from, to, e);
+                yield return null;
+            }
+            transform.position = to;
+
+            // 도착 → 스크롤 상태로 복원(다시 클리핑).
+            if (sr != null)
+            {
+                sr.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
+                sr.sortingOrder = baseOrder;
+            }
+            isPlacing = false;
         }
 
         // 목표 위치로 흡입 이동 후, 그 부모의 자식으로 붙이고 wrap 연출.
