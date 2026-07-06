@@ -5,10 +5,10 @@ using UnityEngine;
 namespace Gunter.Sticker
 {
     // --------------------------------------------------
-    // 실제 본 체인(SkinnedMeshRenderer)을 휘어 스티커를 감싸는 wrap 연출.
-    //  - StickerMeshBaker 의 "Bake Skinned" 로 만든 본 체인을 사용.
-    //  - 붙는 순간 각 본을 굽혔다가(curled) 서서히 펴며(flatten) 안정화.
-    //  - overshoot 로 살짝 튕겼다 붙는 "쫘악" 느낌.
+    // 실제 본 체인(SkinnedMeshRenderer)을 선 방향(시작→끝)으로 말았다가 펴며 붙이는 연출.
+    //  - 처음엔 말려있고, 시작쪽부터 끝쪽으로 "롤"이 풀리듯 펴지며 표면에 붙는다.
+    //  - reverse 로 끝→시작 방향으로 말 수도 있음.
+    //  - OnDrawGizmos 로 베이크된 본 체인/방향(초록=시작, 빨강=끝)을 씬에 표시.
     // --------------------------------------------------
     [RequireComponent(typeof(SkinnedMeshRenderer))]
     public class UI_StickerBoneWrap : MonoBehaviour, IStickerWrap
@@ -16,10 +16,12 @@ namespace Gunter.Sticker
         // --------------------------------------------------
         // Components
         // --------------------------------------------------
-        [Header("Bone Wrap")]
-        [SerializeField] private Vector3 bendAxis = Vector3.forward; // 각 본이 회전하는 로컬 축
-        [SerializeField] private float bendAnglePerBone = 12f;       // 본당 굽힘 각도(도)
-        [SerializeField] private float duration = 0.4f;
+        [Header("Roll Wrap")]
+        [SerializeField] private Vector3 bendAxis = Vector3.forward; // 감기는 회전 축(로컬)
+        [SerializeField] private float bendAnglePerBone = 20f;       // 본당 굽힘 각도(도, 클수록 강하게 말림)
+        [SerializeField] private float rollBand = 0.4f;              // 말림 전이 폭(0~1, 클수록 완만하게 풀림)
+        [SerializeField] private bool reverse = false;               // 끝→시작 방향으로 말기
+        [SerializeField] private float duration = 0.5f;
 
         [Header("Options")]
         [SerializeField] private bool autoPlayOnEnable = false;
@@ -40,7 +42,7 @@ namespace Gunter.Sticker
         private void Awake()
         {
             smr = GetComponent<SkinnedMeshRenderer>();
-            smr.updateWhenOffscreen = true; // 본 굽힘으로 bounds 가 변해도 잘 보이게
+            smr.updateWhenOffscreen = true; // 말림으로 bounds 가 변해도 잘 보이게
 
             bones = smr.bones;
             if (bones != null)
@@ -72,7 +74,7 @@ namespace Gunter.Sticker
 
         public void Hide()
         {
-            ApplyBend(0f); // 평평(rest)
+            ApplyRoll(1f); // 완전히 펴진(평평) 상태
             if (smr != null) smr.enabled = false;
         }
 
@@ -86,29 +88,60 @@ namespace Gunter.Sticker
             {
                 t += Time.deltaTime / Mathf.Max(0.0001f, duration);
                 float p = Mathf.Clamp01(t);
-                // 굽힘량 amount: 1(curled) → 0(flat). overshoot 시 살짝 음수로 반대 튕김.
                 float eased = overshoot ? EaseOutBack(p) : EaseOutCubic(p);
-                ApplyBend(1f - eased);
+                ApplyRoll(eased); // 0=말림 → 1=평평, 시작쪽부터 풀림
                 yield return null;
             }
-            ApplyBend(0f);
+            ApplyRoll(1f);
             playing = null;
             onComplete?.Invoke();
         }
 
-        // amount: 0=평평, 1=최대 굽힘. 체인이라 본마다 같은 각을 주면 호(arc)가 된다.
-        private void ApplyBend(float amount)
+        // p: 0 = 완전히 말림, 1 = 완전히 펴짐(평평).
+        //   말림 경계(front)가 시작→끝으로 이동하며, 경계 앞쪽(끝 방향)은 아직 말려 있다.
+        private void ApplyRoll(float p)
         {
             if (bones == null || restRot == null) return;
 
-            float ang = bendAnglePerBone * amount;
-            var q = Quaternion.AngleAxis(ang, bendAxis);
+            int n = bones.Length;
+            float front = Mathf.Lerp(-rollBand, 1f, p); // -band(전부 말림) → 1(전부 펴짐)
+            float band = Mathf.Max(1e-4f, rollBand);
+            Vector3 axis = bendAxis.sqrMagnitude < 1e-6f ? Vector3.forward : bendAxis.normalized;
 
-            for (int i = 0; i < bones.Length; i++)
+            for (int i = 0; i < n; i++)
             {
                 if (bones[i] == null) continue;
-                // 루트(0)는 고정, 이후 본들만 부모 대비 굽힘 → 누적되어 감김.
-                bones[i].localRotation = (i == 0) ? restRot[i] : restRot[i] * q;
+
+                float bt = n > 1 ? (float)i / (n - 1) : 0f; // 0=시작(root) ~ 1=끝
+                if (reverse) bt = 1f - bt;
+
+                float amt = Mathf.Clamp01((bt - front) / band); // 0=펴짐, 1=말림
+                bones[i].localRotation = restRot[i] * Quaternion.AngleAxis(bendAnglePerBone * amt, axis);
+            }
+        }
+
+        // --------------------------------------------------
+        // Gizmos - 베이크된 본 체인/방향 표시(초록=시작, 빨강=끝)
+        // --------------------------------------------------
+        private void OnDrawGizmos()
+        {
+            var r = GetComponent<SkinnedMeshRenderer>();
+            if (r == null || r.bones == null || r.bones.Length == 0) return;
+
+            var b = r.bones;
+            for (int i = 0; i < b.Length; i++)
+            {
+                if (b[i] == null) continue;
+
+                float u = b.Length > 1 ? (float)i / (b.Length - 1) : 0f;
+                Gizmos.color = Color.Lerp(Color.green, Color.red, u); // 시작→끝
+                Gizmos.DrawSphere(b[i].position, 0.06f);
+
+                if (i < b.Length - 1 && b[i + 1] != null)
+                {
+                    Gizmos.color = Color.yellow;
+                    Gizmos.DrawLine(b[i].position, b[i + 1].position);
+                }
             }
         }
 

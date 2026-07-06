@@ -160,6 +160,21 @@ namespace Gunter.Sticker.EditorTools
             Debug.Log($"[StickerMeshBaker] {baked}개를 스킨 메시로 구웠습니다.");
         }
 
+        // 외부(샘플 빌더 등)에서 단일 오브젝트를 본 스킨 메시로 굽는 진입점.
+        public static void BakeSkinned(GameObject go)
+        {
+            if (go == null) return;
+            var sr = go.GetComponent<SpriteRenderer>();
+            if (sr == null || sr.sprite == null) return;
+
+            var line = go.GetComponentInChildren<UI_StickerBoneLine>(true);
+            if (line == null || line.Points.Count < 2) return;
+
+            EnsureFolder(MESH_DIR);
+            EnsureFolder(MAT_DIR);
+            BakeSkinnedOne(go, sr, line);
+        }
+
         private static void BakeSkinnedOne(GameObject go, SpriteRenderer sr, UI_StickerBoneLine line)
         {
             var sprite = sr.sprite;

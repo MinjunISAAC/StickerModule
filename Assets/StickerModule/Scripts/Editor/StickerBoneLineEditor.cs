@@ -77,14 +77,18 @@ namespace Gunter.Sticker.EditorTools
 
                 if (pts.Count >= 2)
                 {
-                    Handles.color = Color.yellow;
                     var bones = line.SampleBonePositions();
                     for (int i = 0; i < bones.Length; i++)
                     {
                         Vector3 w = t.TransformPoint(bones[i]);
+                        float u = bones.Length > 1 ? (float)i / (bones.Length - 1) : 0f;
+                        Handles.color = Color.Lerp(Color.green, Color.red, u); // 시작=초록, 끝=빨강
                         float bs = HandleUtility.GetHandleSize(w) * 0.1f;
                         Handles.SphereHandleCap(0, w, Quaternion.identity, bs, EventType.Repaint);
                     }
+                    Handles.color = Color.white;
+                    Handles.Label(t.TransformPoint(bones[0]), " start");
+                    Handles.Label(t.TransformPoint(bones[bones.Length - 1]), " end");
                 }
             }
 

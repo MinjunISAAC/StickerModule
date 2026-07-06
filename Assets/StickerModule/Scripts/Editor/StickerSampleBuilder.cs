@@ -82,11 +82,7 @@ namespace Gunter.Sticker.EditorTools
 
                 itemGo.AddComponent<UI_DraggableSticker>();
 
-                // 붙을 때 wrap 연출이 바로 보이도록 미리 굽는다(정점 방식).
-                StickerMeshBaker.BakeSprite(itemGo);
-
-                // 가상의 본(선) 편집 기능을 바로 쓸 수 있게: UI_StickerBoneLine + 기본 가로선.
-                // 아이템 선택 → 인스펙터에서 "그리기 모드" + Bone Count, 씬에 노란 본 미리보기.
+                // 가상의 본(선) + 기본 가로선 부착. 선택하면 인스펙터에서 "그리기 모드"/Bone Count 편집 가능.
                 var boneLine = itemGo.AddComponent<UI_StickerBoneLine>();
                 if (sprite != null)
                 {
@@ -94,6 +90,9 @@ namespace Gunter.Sticker.EditorTools
                     boneLine.AddPoint(new Vector3(-hw, 0f, 0f));
                     boneLine.AddPoint(new Vector3(hw, 0f, 0f));
                 }
+
+                // 본 방식으로 구워서 붙을 때 선 방향으로 "말리는" 연출이 나오게.
+                StickerMeshBaker.BakeSkinned(itemGo);
             }
 
             // 스크롤뷰 private 필드 배선.
