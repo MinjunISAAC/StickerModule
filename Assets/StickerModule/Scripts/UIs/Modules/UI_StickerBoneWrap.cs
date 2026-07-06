@@ -17,7 +17,8 @@ namespace Gunter.Sticker
         // Components
         // --------------------------------------------------
         [Header("Roll Wrap")]
-        [SerializeField] private Vector3 bendAxis = Vector3.forward; // 감기는 회전 축(로컬)
+        [SerializeField] private bool autoAxis = true;               // 선 방향에 수직인 축으로 자동(면이 Z앞으로 말림)
+        [SerializeField] private Vector3 bendAxis = Vector3.up;      // autoAxis 끌 때 쓰는 수동 축(로컬)
         [SerializeField] private float bendAnglePerBone = 14f;       // 본당 굽힘 각도(도, 클수록 강하게 말림)
         [SerializeField] private float rollBand = 0.7f;              // 말림 전이 폭(0~1, 클수록 완만하게=부드럽게 풀림)
         [SerializeField] private bool reverse = false;               // 끝→시작 방향으로 말기
@@ -33,6 +34,7 @@ namespace Gunter.Sticker
         private SkinnedMeshRenderer smr = null;
         private Transform[] bones = null;
         private Quaternion[] restRot = null;
+        private Vector3 rollAxis = Vector3.up;
         private Coroutine playing = null;
         private Action onComplete = null;
 
@@ -51,6 +53,22 @@ namespace Gunter.Sticker
                 for (int i = 0; i < bones.Length; i++)
                     if (bones[i] != null) restRot[i] = bones[i].localRotation;
             }
+            ComputeRollAxis();
+        }
+
+        // 회전축을 선 방향에 수직(평면 내)으로 잡는다 → 면이 Z(앞)로 둥글게 말림.
+        private void ComputeRollAxis()
+        {
+            rollAxis = bendAxis.sqrMagnitude < 1e-6f ? Vector3.up : bendAxis.normalized;
+            if (!autoAxis || bones == null || bones.Length < 2) return;
+
+            Vector3 a = transform.InverseTransformPoint(bones[0].position);
+            Vector3 b = transform.InverseTransformPoint(bones[bones.Length - 1].position);
+            Vector3 d = b - a; d.z = 0f;
+            if (d.sqrMagnitude < 1e-6f) return;
+
+            Vector3 ax = Vector3.Cross(d.normalized, Vector3.forward); // 선 방향에 수직(평면 내)
+            if (ax.sqrMagnitude > 1e-6f) rollAxis = ax.normalized;
         }
 
         private void OnEnable()
@@ -108,7 +126,7 @@ namespace Gunter.Sticker
             int n = bones.Length;
             float front = Mathf.Lerp(-rollBand, 1f, p); // -band(전부 말림) → 1(전부 펴짐)
             float band = Mathf.Max(1e-4f, rollBand);
-            Vector3 axis = bendAxis.sqrMagnitude < 1e-6f ? Vector3.forward : bendAxis.normalized;
+            Vector3 axis = rollAxis;
 
             for (int i = 0; i < n; i++)
             {
@@ -155,6 +173,7 @@ namespace Gunter.Sticker
                 for (int i = 0; i < bones.Length; i++)
                     if (bones[i] != null) restRot[i] = bones[i].localRotation;
             }
+            ComputeRollAxis();
         }
 
         // --------------------------------------------------
