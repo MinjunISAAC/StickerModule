@@ -30,9 +30,10 @@ namespace Gunter.Sticker
         // --------------------------------------------------
         [Header("Wrap")]
         [SerializeField] private EWrapAxis axis = EWrapAxis.Vertical;
-        [SerializeField] private float wrapAngle = 1.0f;   // 최종 감김 정도(라디안, 클수록 강함)
+        [SerializeField] private float wrapAngle = 2.2f;   // 감김 정도(라디안, 클수록 강함=가장자리 더 말림)
         [SerializeField] private float depthScale = 0.15f; // 깊이(Z) 굽힘량 (Lit/원근용)
-        [SerializeField] private float duration = 0.4f;
+        [SerializeField] private float popScale = 0.25f;   // 붙을 때 살짝 커졌다 원복(눈에 잘 띄게)
+        [SerializeField] private float duration = 0.5f;
 
         [Header("Options")]
         [SerializeField] private bool autoPlayOnEnable = false; // 켜지면 자동 재생(테스트용)
@@ -48,6 +49,7 @@ namespace Gunter.Sticker
         private Vector3[] work = null;
         private Vector3 center = Vector3.zero;
         private Vector2 size = Vector2.one;
+        private Vector3 baseScale = Vector3.one;
         private Coroutine playing = null;
         private Action onComplete = null;
 
@@ -58,6 +60,7 @@ namespace Gunter.Sticker
         {
             mf = GetComponent<MeshFilter>();
             rend = GetComponent<MeshRenderer>();
+            baseScale = transform.localScale;
             if (mf.sharedMesh == null) return;
 
             // 공유 에셋 보호를 위해 인스턴스 복제.
@@ -94,6 +97,7 @@ namespace Gunter.Sticker
 
         public void Hide()
         {
+            transform.localScale = baseScale;
             if (mesh != null) { mesh.vertices = baseVerts; mesh.RecalculateBounds(); }
             if (rend != null) rend.enabled = false;
         }
@@ -111,9 +115,12 @@ namespace Gunter.Sticker
                 // 곡면(1) → 평평(0)으로 붙어 안정화. 끝이 평평해 SpriteRenderer 와 매끄럽게 이어짐.
                 float eased = overshoot ? EaseOutBack(p) : EaseOutCubic(p);
                 ApplyWrap(1f - eased);
+                // 살짝 커졌다 원복(붙는 느낌을 눈에 띄게).
+                transform.localScale = baseScale * (1f + popScale * Mathf.Sin(p * Mathf.PI));
                 yield return null;
             }
             ApplyWrap(0f);
+            transform.localScale = baseScale;
             playing = null;
             onComplete?.Invoke();
         }
