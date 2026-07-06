@@ -165,6 +165,7 @@ namespace Gunter.Sticker
         private IEnumerator CoPlace(Vector3 to, Transform parent)
         {
             isPlacing = true;
+            if (owner != null) owner.EndLeaving(); // 스크롤 빈자리 메꿈
 
             Vector3 from = transform.position;
             float t = 0f;

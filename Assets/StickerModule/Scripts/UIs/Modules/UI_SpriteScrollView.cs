@@ -72,6 +72,10 @@ namespace Gunter.Sticker
         private float targetX = 0f;       // 정착 목표 위치
         private float smoothVel = 0f;     // SmoothDamp 내부 속도
 
+        private Transform leavingItem = null; // 뽑혀 나가는 중인 아이템(빈자리 애니용)
+        private int gapIndex = -1;            // 빈자리 위치(레이아웃 인덱스)
+        private float gapFill = 0f;           // 0=빈자리 유지, 1=완전히 메꿔짐
+
         // --------------------------------------------------
         // Properties
         // --------------------------------------------------
@@ -112,6 +116,7 @@ namespace Gunter.Sticker
             }
 
             HandlePointer();
+            if (leavingItem != null) UpdateGap();
             if (dragMode != EDragMode.Scroll && settling) UpdateSettle();
         }
 
@@ -148,14 +153,20 @@ namespace Gunter.Sticker
         {
             if (content == null) return;
 
-            float x = paddingStart;
+            int j = 0;
             for (int i = 0; i < content.childCount; i++)
             {
                 var child = content.GetChild(i);
                 if (!child.gameObject.activeSelf) continue;
 
-                child.localPosition = new Vector3(x, 0f, child.localPosition.z);
-                x += spacing;
+                float baseX = paddingStart + j * spacing;
+                // 빈자리(gapIndex) 이후 아이템은 빈자리 유지 시 한 칸 오른쪽,
+                // 메꿔질수록(gapFill→1) 원위치로 당겨진다.
+                float openExtra = (gapIndex >= 0 && j >= gapIndex) ? spacing : 0f;
+                float finalX = Mathf.Lerp(baseX + openExtra, baseX, gapFill);
+
+                child.localPosition = new Vector3(finalX, 0f, child.localPosition.z);
+                j++;
 
                 if (applyMaskInteraction)
                 {
@@ -171,6 +182,11 @@ namespace Gunter.Sticker
         public void DetachItem(Transform item)
         {
             if (item == null) return;
+
+            gapIndex = item.GetSiblingIndex(); // 빈자리 위치 기억
+            leavingItem = item;
+            gapFill = 0f;                       // 아직 빈자리 유지(드래그 진행에 따라 메꿔짐)
+
             item.SetParent(dragRoot, true);
             Rebuild();
         }
@@ -179,10 +195,39 @@ namespace Gunter.Sticker
         public void ReturnItem(Transform item, int siblingIndex)
         {
             if (item == null || content == null) return;
+
+            leavingItem = null;
+            gapIndex = -1;
+            gapFill = 0f;
+
             item.SetParent(content, true);
             int idx = Mathf.Clamp(siblingIndex, 0, content.childCount - 1);
             item.SetSiblingIndex(idx);
             Rebuild();
+        }
+
+        // 아이템이 슬롯/구역에 배치되어 스크롤을 완전히 떠났을 때: 빈자리 메꿈.
+        public void EndLeaving()
+        {
+            leavingItem = null;
+            gapIndex = -1;
+            gapFill = 0f;
+            Rebuild();
+        }
+
+        // 뽑히는 아이템이 뷰포트 위로 빠져나간 정도에 따라 빈자리를 서서히 메꾼다.
+        private void UpdateGap()
+        {
+            float topEdge = transform.position.y + viewportHeight * 0.5f;
+            float outDist = leavingItem.position.y - topEdge;
+            float range = Mathf.Max(0.01f, spacing);
+            float f = Mathf.Clamp01(outDist / range); // 0=아직 안 빠짐, 1=완전히 빠져나감
+
+            if (!Mathf.Approximately(f, gapFill))
+            {
+                gapFill = f;
+                Rebuild();
+            }
         }
 
         // --------------------------------------------------
