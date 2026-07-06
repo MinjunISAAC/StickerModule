@@ -33,6 +33,7 @@ namespace Gunter.Sticker
         private Vector3 grabOffset = Vector3.zero;
         private int baseOrder = 0;
         private Vector3 baseScale = Vector3.one;
+        private int originalSiblingIndex = 0; // 뽑히기 전 스크롤 목록에서의 순서
 
         // --------------------------------------------------
         // Unity
@@ -70,6 +71,7 @@ namespace Gunter.Sticker
             owner = scrollView;
             cam = camera != null ? camera : Camera.main;
 
+            originalSiblingIndex = transform.GetSiblingIndex(); // 분리 전 순서 기억
             owner.DetachItem(transform);
 
             sr.maskInteraction = SpriteMaskInteraction.None; // 뷰포트 밖에서도 안 잘리게
@@ -97,9 +99,11 @@ namespace Gunter.Sticker
             }
             else
             {
-                // 유효한 자리 없음 → 스크롤로 복귀
+                // 유효한 자리 없음 → 스크롤 목록의 원래 순서로 복귀
                 sr.sortingOrder = baseOrder;
-                if (owner != null) owner.ReturnItem(transform);
+                sr.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
+                transform.localScale = baseScale;
+                if (owner != null) owner.ReturnItem(transform, originalSiblingIndex);
             }
         }
 

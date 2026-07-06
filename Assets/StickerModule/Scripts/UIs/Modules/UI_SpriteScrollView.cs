@@ -142,11 +142,13 @@ namespace Gunter.Sticker
             Rebuild();
         }
 
-        // 유효한 자리에 못 놓았을 때 스크롤 목록으로 되돌린다.
-        public void ReturnItem(Transform item)
+        // 유효한 자리에 못 놓았을 때 스크롤 목록의 원래 순서로 되돌린다.
+        public void ReturnItem(Transform item, int siblingIndex)
         {
             if (item == null || content == null) return;
             item.SetParent(content, true);
+            int idx = Mathf.Clamp(siblingIndex, 0, content.childCount - 1);
+            item.SetSiblingIndex(idx);
             Rebuild();
         }
 
