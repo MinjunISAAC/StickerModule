@@ -131,6 +131,18 @@ namespace Gunter.Sticker
         [ContextMenu("Preview: Flat (평평)")]
         private void PreviewFlat() { EnsureCache(); ApplyRoll(1f); }
 
+        // 에디터 프리뷰 진입점(커스텀 에디터가 시간에 맞춰 호출).
+        public float PreviewDuration => Mathf.Max(0.0001f, duration);
+
+        // p: 0(재생 시작) ~ 1(끝) 의 raw 시간 비율. 내부에서 이징 적용.
+        public void SamplePreview(float p)
+        {
+            EnsureCache();
+            if (smr != null) smr.enabled = true; // 에디터에서 메시가 보이도록
+            float eased = overshoot ? EaseOutBack(Mathf.Clamp01(p)) : Mathf.SmoothStep(0f, 1f, p);
+            ApplyRoll(eased);
+        }
+
         private void EnsureCache()
         {
             if (smr == null) smr = GetComponent<SkinnedMeshRenderer>();
