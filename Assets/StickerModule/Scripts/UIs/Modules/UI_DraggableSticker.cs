@@ -94,30 +94,37 @@ namespace Gunter.Sticker
         {
             isPulled = false;
 
+            // 1순위: 가까운 슬롯(점+반경). 2순위: 붙이는 구역(면적) 안.
             float dist;
             var slot = UI_StickerSlot.FindNearest(transform.position, out dist);
-
             if (slot != null && !slot.IsOccupied && dist <= slot.SnapDistance)
             {
-                StartCoroutine(CoSuckIn(slot));
+                slot.Occupy(this);
+                StartCoroutine(CoPlace(slot.transform.position, slot.transform));
+                return;
             }
-            else
+
+            var zone = UI_StickerDropZone.FindContaining(transform.position);
+            if (zone != null)
             {
-                // 유효한 자리 없음 → 스크롤 목록의 원래 순서로 복귀
-                sr.sortingOrder = baseOrder;
-                sr.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
-                transform.localScale = baseScale;
-                if (owner != null) owner.ReturnItem(transform, originalSiblingIndex);
+                // 구역 안이면 놓은 위치(경계 안으로 클램프)에 그대로 붙인다.
+                StartCoroutine(CoPlace(zone.ClampPoint(transform.position), zone.transform));
+                return;
             }
+
+            // 유효한 자리 없음 → 스크롤 목록의 원래 순서로 복귀
+            sr.sortingOrder = baseOrder;
+            sr.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
+            transform.localScale = baseScale;
+            if (owner != null) owner.ReturnItem(transform, originalSiblingIndex);
         }
 
-        private IEnumerator CoSuckIn(UI_StickerSlot slot)
+        // 목표 위치로 흡입 이동 후, 그 부모의 자식으로 붙이고 wrap 연출.
+        private IEnumerator CoPlace(Vector3 to, Transform parent)
         {
             isPlacing = true;
-            slot.Occupy(this);
 
             Vector3 from = transform.position;
-            Vector3 to = slot.transform.position;
             float t = 0f;
 
             while (t < 1f)
@@ -137,7 +144,7 @@ namespace Gunter.Sticker
 
             transform.position = to;
             transform.localScale = baseScale;
-            transform.SetParent(slot.transform, true); // 특정 구역의 자식으로 배치 완료
+            transform.SetParent(parent, true); // 해당 구역의 자식으로 배치 완료
             sr.sortingOrder = baseOrder;
 
             // 도착하는 순간 메시로 전환하고 곡면 wrap 연출("쫘악" 붙기).

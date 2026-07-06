@@ -110,12 +110,19 @@ namespace Gunter.Sticker.EditorTools
                 slotGo.AddComponent<UI_StickerSlot>();
             }
 
+            // ---------- 자유 배치 구역(면적 판정) ----------
+            // 화면 위쪽 한쪽에 사각 구역. 안에 놓으면 그 위치에 그대로 붙는다.
+            var freeZoneGo = new GameObject("FreeZone");
+            freeZoneGo.transform.SetParent(root.transform, false);
+            freeZoneGo.transform.position = new Vector3(0f, 3.2f, 0f);
+            freeZoneGo.AddComponent<UI_StickerDropZone>();
+
             Selection.activeGameObject = root;
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
 
             Debug.Log("[StickerSampleBuilder] 샘플 생성 완료. Play 버튼으로 테스트하세요.\n" +
                       "- 아래 스크롤 목록을 좌우로 끌면 스크롤, 아이템을 위로 끌면 뽑힙니다.\n" +
-                      "- 위쪽 노란 슬롯 근처에 놓으면 빨려들어가 붙습니다.");
+                      "- 노란 슬롯 근처에 놓으면 그 점에 스냅, 초록 구역(FreeZone) 안에 놓으면 그 위치에 붙습니다.");
         }
 
         // --------------------------------------------------
