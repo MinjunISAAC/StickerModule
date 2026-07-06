@@ -25,8 +25,7 @@ namespace Gunter.Sticker
         // Fields
         // --------------------------------------------------
         private SpriteRenderer sr = null;
-        private MeshRenderer meshRenderer = null;      // 배치 시 켜지는 격자 메시(구운 것)
-        private UI_StickerMeshWrap meshWrap = null;     // 곡면 wrap 연출
+        private IStickerWrap wrap = null;              // 배치 시 재생할 wrap(정점/본 방식 공통)
         private UI_SpriteScrollView owner = null;
         private Camera cam = null;
 
@@ -43,8 +42,7 @@ namespace Gunter.Sticker
         private void Awake()
         {
             sr = GetComponent<SpriteRenderer>();
-            meshRenderer = GetComponentInChildren<MeshRenderer>(true);      // 자식 "WrapMesh"(구운 경우)
-            meshWrap = GetComponentInChildren<UI_StickerMeshWrap>(true);
+            wrap = GetComponentInChildren<IStickerWrap>(true);   // 자식 "WrapMesh"(구운 경우에만 존재)
             baseOrder = sr.sortingOrder;
             baseScale = transform.localScale;
         }
@@ -157,12 +155,11 @@ namespace Gunter.Sticker
         // (메시를 굽지 않았다면 스프라이트 그대로 둔다.)
         private void PlaceAsWrappedMesh()
         {
-            if (meshRenderer == null || meshWrap == null) return;
+            if (wrap == null) return; // 굽지 않았으면 스프라이트 그대로
 
             if (sr != null) sr.enabled = false;
-            meshRenderer.enabled = true;
-            meshWrap.ResetFlat();
-            meshWrap.PlayWrap();
+            wrap.ResetFlat();
+            wrap.PlayWrap();
         }
     }
 }

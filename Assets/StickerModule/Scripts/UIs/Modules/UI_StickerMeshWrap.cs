@@ -13,7 +13,7 @@ namespace Gunter.Sticker
     // 붙는 순간 PlayWrap() 을 호출하면 평평 → 곡면 conform 으로 안정화된다.
     // --------------------------------------------------
     [RequireComponent(typeof(MeshFilter))]
-    public class UI_StickerMeshWrap : MonoBehaviour
+    public class UI_StickerMeshWrap : MonoBehaviour, IStickerWrap
     {
         // --------------------------------------------------
         // Enums
@@ -41,6 +41,7 @@ namespace Gunter.Sticker
         // Fields
         // --------------------------------------------------
         private MeshFilter mf = null;
+        private MeshRenderer rend = null;
         private Mesh mesh = null;
         private Vector3[] baseVerts = null;
         private Vector3[] work = null;
@@ -54,6 +55,7 @@ namespace Gunter.Sticker
         private void Awake()
         {
             mf = GetComponent<MeshFilter>();
+            rend = GetComponent<MeshRenderer>();
             if (mf.sharedMesh == null) return;
 
             // 공유 에셋 보호를 위해 인스턴스 복제.
@@ -79,6 +81,7 @@ namespace Gunter.Sticker
         // --------------------------------------------------
         public void PlayWrap()
         {
+            if (rend != null) rend.enabled = true;
             if (mesh == null) return;
             if (playing != null) StopCoroutine(playing);
             playing = StartCoroutine(CoPlay());
@@ -93,6 +96,7 @@ namespace Gunter.Sticker
         // 평평한 원본 상태로.
         public void ResetFlat()
         {
+            if (rend != null) rend.enabled = true;
             if (mesh == null) return;
             mesh.vertices = baseVerts;
             mesh.RecalculateBounds();
